@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Multi Doctor Token Display</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700&family=Roboto:wght@700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      background: #AAB0B9;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      position: relative;
+      font-family: 'Roboto', sans-serif;
+      color: #1E1E1E;
+    }
+
+    .tile {
+      position: absolute;
+      background: #D8DEE9;
+      border: 2px solid #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .doctor-name {
+      font-size: 2em;
+      font-weight: bold;
+    }
+
+    .room {
+      font-size: 3em;
+      margin-top: 0.2em;
+      font-weight: 700;
+    }
+
+    .token-label {
+      font-size: 1.5em;
+      margin-top: 0.2em;
+    }
+
+    .token-number {
+      font-size: 6em;
+      color: #1E1E1E;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+    }
+
+    .flicker {
+      animation: flickerAnimation 3s ease-in-out;
+    }
+
+    @keyframes flickerAnimation {
+      0%, 20%, 40%, 60%, 80%, 100% { opacity: 1; }
+      10%, 30%, 50%, 70%, 90% { opacity: 0; }
+    }
+
+    /* Positioning based on provided coordinates */
+    #dr1 { left: 0; top: 0; width: 480px; height: 360px; }
+    #dr2 { left: 0; top: 360px; width: 480px; height: 360px; }
+    #dr3 { left: 0; top: 720px; width: 480px; height: 360px; }
+    #dr4 { left: 480px; top: 720px; width: 480px; height: 360px; }
+    #dr5 { left: 960px; top: 720px; width: 480px; height: 360px; }
+    #dr6 { left: 1440px; top: 720px; width: 480px; height: 360px; }
+
+    /* Video section */
+    #videoContainer {
+      position: absolute;
+      left: 480px;
+      top: 0;
+      width: 1440px;
+      height: 720px;
+      overflow: hidden;
+      background: black;
+    }
+
+    #videoContainer video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Video area -->
+  <div id="videoContainer">
+    <video autoplay loop muted>
+      <source src="sample-video.mp4" type="video/mp4"/>
+      Your browser does not support the video tag.
+    </video>
+  </div>
+
+  <!-- Doctor Tiles -->
+  <div id="dr1" class="tile">
+    <div class="doctor-name">Dr 1</div>
+    <div class="room" id="room-1"></div>
+    <div class="token-label">Token</div>
+    <div class="token-number" id="token-1"></div>
+  </div>
+
+  <div id="dr2" class="tile">
+    <div class="doctor-name">Dr 2</div>
+    <div class="room" id="room-2"></div>
+    <div class="token-label">Token</div>
+    <div class="token-number" id="token-2"></div>
+  </div>
+
+  <div id="dr3" class="tile">
+    <div class="doctor-name">Dr 3</div>
+    <div class="room" id="room-3"></div>
+    <div class="token-label">Token</div>
+    <div class="token-number" id="token-3"></div>
+  </div>
+
+  <div id="dr4" class="tile">
+    <div class="doctor-name">Dr 4</div>
+    <div class="room" id="room-4"></div>
+    <div class="token-label">Token</div>
+    <div class="token-number" id="token-4"></div>
+  </div>
+
+  <div id="dr5" class="tile">
+    <div class="doctor-name">Dr 5</div>
+    <div class="room" id="room-5"></div>
+    <div class="token-label">Token</div>
+    <div class="token-number" id="token-5"></div>
+  </div>
+
+  <div id="dr6" class="tile">
+    <div class="doctor-name">Dr 6</div>
+    <div class="room" id="room-6"></div>
+    <div class="token-label">Token</div>
+    <div class="token-number" id="token-6"></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { createClient } = supabase;
+      const supabaseUrl = 'https://aanlephegmswewskrkxq.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhbmxlcGhlZ21zd2V3c2tya3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNTUwNzYsImV4cCI6MjA3NzkzMTA3Nn0.35tkpljQzZ6bwT9H5-BhCkyEIU3O-kPPLDDtscVFeAc';
+      const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+      const doctors = ["Dr 1", "Dr 2", "Dr 3", "Dr 4", "Dr 5", "Dr 6"];
+      const lastTokens = {};
+      let isEnglish = true;
+
+      function toMarathiDigits(number) {
+        const marathiDigits = ['०','१','२','३','४','५','६','७','८','९'];
+        return number.toString().split('').map(d => marathiDigits[+d] || d).join('');
+      }
+
+      async function fetchDoctorToken(doctorName) {
+        const { data, error } = await supabaseClient
+          .from('running_token_details')
+          .select('"DOCTOR NAME", "ROOM NO", "TOKEN NUMBER", "CREATED AT"')
+          .eq('DOCTOR NAME', doctorName)
+          .order('CREATED AT', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error(`Error fetching data for ${doctorName}:`, error);
+          return null;
+        }
+        return data.length ? data[0] : null;
+      }
+
+      function renderDisplay(doctorIndex, tokenData) {
+        const roomEl = document.getElementById(`room-${doctorIndex + 1}`);
+        const tokenEl = document.getElementById(`token-${doctorIndex + 1}`);
+        if (!tokenData) {
+          roomEl.textContent = '';
+          tokenEl.textContent = '';
+          return;
+        }
+
+        const room = tokenData["ROOM NO"];
+        const token = tokenData["TOKEN NUMBER"];
+        const roomLabel = isEnglish ? `Room : ${room}` : `रूम : ${toMarathiDigits(room)}`;
+        const tokenLabel = isEnglish ? token : toMarathiDigits(token);
+
+        roomEl.textContent = roomLabel;
+        tokenEl.textContent = tokenLabel;
+      }
+
+      async function updateDoctor(doctorName, index) {
+        const tokenData = await fetchDoctorToken(doctorName);
+        if (!tokenData) return;
+
+        const newToken = tokenData["TOKEN NUMBER"];
+        const tokenEl = document.getElementById(`token-${index + 1}`);
+
+        if (lastTokens[doctorName] !== undefined && newToken !== lastTokens[doctorName]) {
+          tokenEl.classList.remove('flicker');
+          void tokenEl.offsetWidth;
+          tokenEl.classList.add('flicker');
+        }
+
+        lastTokens[doctorName] = newToken;
+        renderDisplay(index, tokenData);
+      }
+
+      async function updateAll() {
+        for (let i = 0; i < doctors.length; i++) {
+          await updateDoctor(doctors[i], i);
+        }
+      }
+
+      // Initial display
+      await updateAll();
+
+      // Realtime updates
+      supabaseClient
+        .channel('realtime running_token_details')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'running_token_details' }, () => {
+          updateAll();
+        })
+        .subscribe();
+
+      // Switch language every 30s
+      setInterval(() => {
+        isEnglish = !isEnglish;
+        updateAll();
+      }, 30000);
+    });
+  </script>
+</body>
+</html>
