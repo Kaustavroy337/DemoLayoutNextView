@@ -1,24 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Multi Doctor Token Display</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Multi Doctor Token Display (Responsive)</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700&family=Roboto:wght@700&display=swap" rel="stylesheet">
 
   <style>
-    body {
+    /* Page background and centering */
+    html, body {
+      height: 100%;
       margin: 0;
       background: #AAB0B9;
-      width: 1920px;
-      height: 1080px;
-      overflow: hidden;
-      position: relative;
       font-family: 'Roboto', sans-serif;
-      color: #1E1E1E;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden; /* keep it tidy; stage will be scaled to fit */
     }
 
+    /* Stage: fixed design coordinate system 1920x1080 */
+    #stage-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #stage {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      /* background for the stage area */
+      background: linear-gradient(180deg, #AAB0B9 0%, #CED5DB 100%);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      transform-origin: top left; /* scaled from top-left then centered via wrapper's flex centering */
+      overflow: hidden;
+    }
+
+    /* Tiles base style (based on original) */
     .tile {
       position: absolute;
       background: #D8DEE9;
@@ -29,29 +51,34 @@
       justify-content: center;
       text-align: center;
       overflow: hidden;
+      box-sizing: border-box;
     }
 
     .doctor-name {
-      font-size: 2em;
-      font-weight: bold;
+      font-size: 40px; /* sizes chosen for 1920x1080 stage */
+      font-weight: 700;
+      line-height: 1;
+      padding: 6px 10px;
     }
 
     .room {
-      font-size: 3em;
-      margin-top: 0.2em;
+      font-size: 48px;
+      margin-top: 6px;
       font-weight: 700;
     }
 
     .token-label {
-      font-size: 1.5em;
-      margin-top: 0.2em;
+      font-size: 32px;
+      margin-top: 6px;
     }
 
     .token-number {
-      font-size: 6em;
+      font-size: 180px;
       color: #1E1E1E;
       font-family: 'Inter', sans-serif;
       font-weight: 700;
+      line-height: 0.9;
+      margin-top: 6px;
     }
 
     .flicker {
@@ -63,23 +90,26 @@
       10%, 30%, 50%, 70%, 90% { opacity: 0; }
     }
 
-    /* Positioning based on provided coordinates */
-    #dr1 { left: 0; top: 0; width: 480px; height: 360px; }
-    #dr2 { left: 0; top: 360px; width: 480px; height: 360px; }
-    #dr3 { left: 0; top: 720px; width: 480px; height: 360px; }
+    /* Positioning using pixel-perfect coordinates on the stage (1920x1080 design) */
+    #dr1 { left: 0px; top: 0px; width: 480px; height: 360px; }
+    #dr2 { left: 0px; top: 360px; width: 480px; height: 360px; }
+    #dr3 { left: 0px; top: 720px; width: 480px; height: 360px; }
     #dr4 { left: 480px; top: 720px; width: 480px; height: 360px; }
     #dr5 { left: 960px; top: 720px; width: 480px; height: 360px; }
     #dr6 { left: 1440px; top: 720px; width: 480px; height: 360px; }
 
-    /* Video section */
+    /* Video section exactly where requested */
     #videoContainer {
       position: absolute;
       left: 480px;
-      top: 0;
+      top: 0px;
       width: 1440px;
       height: 720px;
       overflow: hidden;
       background: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     #videoContainer video {
@@ -87,66 +117,128 @@
       height: 100%;
       object-fit: cover;
     }
+
+    /* Make sure text doesn't wrap awkwardly on scale - keep it clipped if necessary */
+    .doctor-name, .room, .token-label, .token-number {
+      white-space: nowrap;
+    }
+
+    /* Accessibility: scale down fonts on extremely small screens (only if transform alone insufficient) */
+    @media (max-width: 640px) {
+      .doctor-name { font-size: 28px; }
+      .room { font-size: 34px; }
+      .token-label { font-size: 22px; }
+      .token-number { font-size: 120px; }
+    }
   </style>
 </head>
 
 <body>
-  <!-- Video area -->
-  <div id="videoContainer">
-    <video autoplay loop muted>
-      <source src="sample-video.mp4" type="video/mp4"/>
-      Your browser does not support the video tag.
-    </video>
-  </div>
+  <div id="stage-wrapper">
+    <div id="stage" aria-label="Token dashboard stage">
+      <!-- Video area -->
+      <div id="videoContainer" role="region" aria-label="Information video">
+        <!-- Replace sample-video.mp4 with your own path or stream -->
+        <video autoplay loop muted playsinline>
+          <source src="sample-video.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+      </div>
 
-  <!-- Doctor Tiles -->
-  <div id="dr1" class="tile">
-    <div class="doctor-name">Dr 1</div>
-    <div class="room" id="room-1"></div>
-    <div class="token-label">Token</div>
-    <div class="token-number" id="token-1"></div>
-  </div>
+      <!-- Doctor Tiles -->
+      <div id="dr1" class="tile" role="region" aria-label="Dr 1 token">
+        <div class="doctor-name">Dr 1</div>
+        <div class="room" id="room-1"></div>
+        <div class="token-label">Token</div>
+        <div class="token-number" id="token-1"></div>
+      </div>
 
-  <div id="dr2" class="tile">
-    <div class="doctor-name">Dr 2</div>
-    <div class="room" id="room-2"></div>
-    <div class="token-label">Token</div>
-    <div class="token-number" id="token-2"></div>
-  </div>
+      <div id="dr2" class="tile" role="region" aria-label="Dr 2 token">
+        <div class="doctor-name">Dr 2</div>
+        <div class="room" id="room-2"></div>
+        <div class="token-label">Token</div>
+        <div class="token-number" id="token-2"></div>
+      </div>
 
-  <div id="dr3" class="tile">
-    <div class="doctor-name">Dr 3</div>
-    <div class="room" id="room-3"></div>
-    <div class="token-label">Token</div>
-    <div class="token-number" id="token-3"></div>
-  </div>
+      <div id="dr3" class="tile" role="region" aria-label="Dr 3 token">
+        <div class="doctor-name">Dr 3</div>
+        <div class="room" id="room-3"></div>
+        <div class="token-label">Token</div>
+        <div class="token-number" id="token-3"></div>
+      </div>
 
-  <div id="dr4" class="tile">
-    <div class="doctor-name">Dr 4</div>
-    <div class="room" id="room-4"></div>
-    <div class="token-label">Token</div>
-    <div class="token-number" id="token-4"></div>
-  </div>
+      <div id="dr4" class="tile" role="region" aria-label="Dr 4 token">
+        <div class="doctor-name">Dr 4</div>
+        <div class="room" id="room-4"></div>
+        <div class="token-label">Token</div>
+        <div class="token-number" id="token-4"></div>
+      </div>
 
-  <div id="dr5" class="tile">
-    <div class="doctor-name">Dr 5</div>
-    <div class="room" id="room-5"></div>
-    <div class="token-label">Token</div>
-    <div class="token-number" id="token-5"></div>
-  </div>
+      <div id="dr5" class="tile" role="region" aria-label="Dr 5 token">
+        <div class="doctor-name">Dr 5</div>
+        <div class="room" id="room-5"></div>
+        <div class="token-label">Token</div>
+        <div class="token-number" id="token-5"></div>
+      </div>
 
-  <div id="dr6" class="tile">
-    <div class="doctor-name">Dr 6</div>
-    <div class="room" id="room-6"></div>
-    <div class="token-label">Token</div>
-    <div class="token-number" id="token-6"></div>
+      <div id="dr6" class="tile" role="region" aria-label="Dr 6 token">
+        <div class="doctor-name">Dr 6</div>
+        <div class="room" id="room-6"></div>
+        <div class="token-label">Token</div>
+        <div class="token-number" id="token-6"></div>
+      </div>
+    </div>
   </div>
 
   <script>
+    // ---------------------------
+    // Stage scaling logic
+    // ---------------------------
+    (function setupStageScaler() {
+      const stage = document.getElementById('stage');
+      const wrapper = document.getElementById('stage-wrapper');
+
+      function applyScale() {
+        const winW = window.innerWidth;
+        const winH = window.innerHeight;
+        const designW = 1920;
+        const designH = 1080;
+
+        // Uniform scale to fit both width and height (preserve aspect ratio)
+        const scale = Math.min(winW / designW, winH / designH);
+
+        // Apply CSS transform
+        stage.style.transform = `scale(${scale})`;
+
+        // Optional: to keep pixel sharpness on some displays, we can set transform-origin to top-left (already set)
+        // The wrapper is a flex container centered, so the scaled stage will be centered in viewport.
+      }
+
+      // Use requestAnimationFrame on resize for smoother updates
+      let rafId = null;
+      function onResize() {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          applyScale();
+          rafId = null;
+        });
+      }
+
+      window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', onResize);
+
+      // initial
+      applyScale();
+    })();
+
+    // ---------------------------
+    // Supabase + display logic (unchanged features)
+    // ---------------------------
     document.addEventListener('DOMContentLoaded', async () => {
       const { createClient } = supabase;
       const supabaseUrl = 'https://aanlephegmswewskrkxq.supabase.co';
       const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhbmxlcGhlZ21zd2V3c2tya3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNTUwNzYsImV4cCI6MjA3NzkzMTA3Nn0.35tkpljQzZ6bwT9H5-BhCkyEIU3O-kPPLDDtscVFeAc';
+
       const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
       const doctors = ["Dr 1", "Dr 2", "Dr 3", "Dr 4", "Dr 5", "Dr 6"];
@@ -159,18 +251,23 @@
       }
 
       async function fetchDoctorToken(doctorName) {
-        const { data, error } = await supabaseClient
-          .from('running_token_details')
-          .select('"DOCTOR NAME", "ROOM NO", "TOKEN NUMBER", "CREATED AT"')
-          .eq('DOCTOR NAME', doctorName)
-          .order('CREATED AT', { ascending: false })
-          .limit(1);
+        try {
+          const { data, error } = await supabaseClient
+            .from('running_token_details')
+            .select('"DOCTOR NAME", "ROOM NO", "TOKEN NUMBER", "CREATED AT"')
+            .eq('DOCTOR NAME', doctorName)
+            .order('CREATED AT', { ascending: false })
+            .limit(1);
 
-        if (error) {
-          console.error(`Error fetching data for ${doctorName}:`, error);
+          if (error) {
+            console.error(`Error fetching data for ${doctorName}:`, error);
+            return null;
+          }
+          return data && data.length ? data[0] : null;
+        } catch (err) {
+          console.error('Unexpected fetch error:', err);
           return null;
         }
-        return data.length ? data[0] : null;
       }
 
       function renderDisplay(doctorIndex, tokenData) {
@@ -199,7 +296,10 @@
         const tokenEl = document.getElementById(`token-${index + 1}`);
 
         if (lastTokens[doctorName] !== undefined && newToken !== lastTokens[doctorName]) {
+          // trigger flicker animation
           tokenEl.classList.remove('flicker');
+          // force reflow to restart animation
+          // eslint-disable-next-line no-unused-expressions
           void tokenEl.offsetWidth;
           tokenEl.classList.add('flicker');
         }
@@ -209,15 +309,14 @@
       }
 
       async function updateAll() {
-        for (let i = 0; i < doctors.length; i++) {
-          await updateDoctor(doctors[i], i);
-        }
+        // run updates in parallel for speed
+        await Promise.all(doctors.map((d, i) => updateDoctor(d, i)));
       }
 
-      // Initial display
+      // initial
       await updateAll();
 
-      // Realtime updates
+      // Realtime updates: subscribe to changes in running_token_details
       supabaseClient
         .channel('realtime running_token_details')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'running_token_details' }, () => {
@@ -225,7 +324,7 @@
         })
         .subscribe();
 
-      // Switch language every 30s
+      // Switch language every 30 seconds
       setInterval(() => {
         isEnglish = !isEnglish;
         updateAll();
