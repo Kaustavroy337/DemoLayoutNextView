@@ -3,13 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Multi Doctor Token Display (Responsive)</title>
+  <title>Multi Doctor Token Display - Fill Screen</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700&family=Roboto:wght@700&display=swap" rel="stylesheet">
 
   <style>
-    /* Page background and centering */
     html, body {
       height: 100%;
       margin: 0;
@@ -17,30 +16,32 @@
       font-family: 'Roboto', sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      overflow: hidden; /* keep it tidy; stage will be scaled to fit */
+      overflow: hidden; /* ensure no scrollbars */
     }
 
-    /* Stage: fixed design coordinate system 1920x1080 */
+    /* Wrapper fills viewport and clips overflow */
     #stage-wrapper {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: fixed;
+      inset: 0;
+      display: block;
+      overflow: hidden;
+      background: linear-gradient(180deg, #AAB0B9 0%, #CED5DB 100%);
     }
 
+    /* Design stage uses 1920x1080 coordinate system */
     #stage {
       width: 1920px;
       height: 1080px;
-      position: relative;
-      /* background for the stage area */
-      background: linear-gradient(180deg, #AAB0B9 0%, #CED5DB 100%);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      /* transform will be set dynamically to translate(-50%,-50%) scale(s) */
+      transform-origin: center center;
       box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-      transform-origin: top left; /* scaled from top-left then centered via wrapper's flex centering */
       overflow: hidden;
+      background: transparent;
     }
 
-    /* Tiles base style (based on original) */
     .tile {
       position: absolute;
       background: #D8DEE9;
@@ -55,7 +56,7 @@
     }
 
     .doctor-name {
-      font-size: 40px; /* sizes chosen for 1920x1080 stage */
+      font-size: 40px;
       font-weight: 700;
       line-height: 1;
       padding: 6px 10px;
@@ -90,7 +91,7 @@
       10%, 30%, 50%, 70%, 90% { opacity: 0; }
     }
 
-    /* Positioning using pixel-perfect coordinates on the stage (1920x1080 design) */
+    /* Pixel-perfect positions on stage */
     #dr1 { left: 0px; top: 0px; width: 480px; height: 360px; }
     #dr2 { left: 0px; top: 360px; width: 480px; height: 360px; }
     #dr3 { left: 0px; top: 720px; width: 480px; height: 360px; }
@@ -98,7 +99,6 @@
     #dr5 { left: 960px; top: 720px; width: 480px; height: 360px; }
     #dr6 { left: 1440px; top: 720px; width: 480px; height: 360px; }
 
-    /* Video section exactly where requested */
     #videoContainer {
       position: absolute;
       left: 480px;
@@ -118,27 +118,16 @@
       object-fit: cover;
     }
 
-    /* Make sure text doesn't wrap awkwardly on scale - keep it clipped if necessary */
     .doctor-name, .room, .token-label, .token-number {
       white-space: nowrap;
     }
-
-    /* Accessibility: scale down fonts on extremely small screens (only if transform alone insufficient) */
-    @media (max-width: 640px) {
-      .doctor-name { font-size: 28px; }
-      .room { font-size: 34px; }
-      .token-label { font-size: 22px; }
-      .token-number { font-size: 120px; }
-    }
   </style>
 </head>
-
 <body>
-  <div id="stage-wrapper">
+  <div id="stage-wrapper" aria-hidden="false">
     <div id="stage" aria-label="Token dashboard stage">
       <!-- Video area -->
       <div id="videoContainer" role="region" aria-label="Information video">
-        <!-- Replace sample-video.mp4 with your own path or stream -->
         <video autoplay loop muted playsinline>
           <source src="sample-video.mp4" type="video/mp4">
           Your browser does not support the video tag.
@@ -192,11 +181,10 @@
 
   <script>
     // ---------------------------
-    // Stage scaling logic
+    // Stage "cover" scaling: fill viewport (may crop edges), center stage
     // ---------------------------
     (function setupStageScaler() {
       const stage = document.getElementById('stage');
-      const wrapper = document.getElementById('stage-wrapper');
 
       function applyScale() {
         const winW = window.innerWidth;
@@ -204,17 +192,14 @@
         const designW = 1920;
         const designH = 1080;
 
-        // Uniform scale to fit both width and height (preserve aspect ratio)
-        const scale = Math.min(winW / designW, winH / designH);
+        // COVER: scale such that stage fills viewport (may crop)
+        const scale = Math.max(winW / designW, winH / designH);
 
-        // Apply CSS transform
-        stage.style.transform = `scale(${scale})`;
-
-        // Optional: to keep pixel sharpness on some displays, we can set transform-origin to top-left (already set)
-        // The wrapper is a flex container centered, so the scaled stage will be centered in viewport.
+        // Set transform: translate(-50%,-50%) to center, then scale
+        stage.style.transform = `translate(-50%, -50%) scale(${scale})`;
       }
 
-      // Use requestAnimationFrame on resize for smoother updates
+      // Debounced requestAnimationFrame on resize
       let rafId = null;
       function onResize() {
         if (rafId) cancelAnimationFrame(rafId);
@@ -227,7 +212,7 @@
       window.addEventListener('resize', onResize);
       window.addEventListener('orientationchange', onResize);
 
-      // initial
+      // initial call
       applyScale();
     })();
 
@@ -296,10 +281,7 @@
         const tokenEl = document.getElementById(`token-${index + 1}`);
 
         if (lastTokens[doctorName] !== undefined && newToken !== lastTokens[doctorName]) {
-          // trigger flicker animation
           tokenEl.classList.remove('flicker');
-          // force reflow to restart animation
-          // eslint-disable-next-line no-unused-expressions
           void tokenEl.offsetWidth;
           tokenEl.classList.add('flicker');
         }
@@ -309,14 +291,12 @@
       }
 
       async function updateAll() {
-        // run updates in parallel for speed
         await Promise.all(doctors.map((d, i) => updateDoctor(d, i)));
       }
 
       // initial
       await updateAll();
 
-      // Realtime updates: subscribe to changes in running_token_details
       supabaseClient
         .channel('realtime running_token_details')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'running_token_details' }, () => {
